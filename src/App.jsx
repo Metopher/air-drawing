@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import AirDrawing from "./pages/AirDrawing";
+import Gallery from "./pages/Gallery";
 import "./App.css";
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/draw" element={<AirDrawing />} />
+            <Route path="/gallery" element={<Gallery />} />
           </Routes>
         </main>
       </div>

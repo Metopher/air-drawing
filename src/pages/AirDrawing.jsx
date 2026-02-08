@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Save } from "lucide-react";
+import { supabase } from "../supabaseClient";
 
 function AirDrawing() {
     const videoRef = useRef(null);
@@ -109,6 +110,46 @@ function AirDrawing() {
         canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
     };
 
+    const saveDrawing = async () => {
+        const canvas = drawCanvasRef.current;
+
+        // Check if user is logged in
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            alert("Please sign in to save drawings!");
+            return;
+        }
+
+        canvas.toBlob(async (blob) => {
+            const fileName = `${user.id}/${Date.now()}.png`;
+            const { error: uploadError } = await supabase.storage
+                .from('drawings')
+                .upload(fileName, blob);
+
+            if (uploadError) {
+                console.error('Error uploading:', uploadError);
+                alert('Failed to upload drawing.');
+                return;
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('drawings')
+                .getPublicUrl(fileName);
+
+            const { error: dbError } = await supabase
+                .from('drawings')
+                .insert([
+                    { user_id: user.id, image_url: publicUrl, title: `Drawing ${new Date().toLocaleTimeString()}` }
+                ]);
+
+            if (dbError) {
+                console.error('Error saving to db:', dbError);
+            } else {
+                alert('Drawing saved!');
+            }
+        });
+    };
+
     return (
         <div style={{ textAlign: "center", padding: "2rem" }}>
             <h2 className="text-2xl font-bold" style={{ marginBottom: "1rem" }}>
@@ -118,13 +159,20 @@ function AirDrawing() {
                 Point your index finger to draw. Close your hand to stop.
             </p>
 
-            <button
-                onClick={clearCanvas}
-                className="btn btn-primary"
-                style={{ marginBottom: "2rem" }}
-            >
-                <Trash2 size={18} /> Clear Canvas
-            </button>
+            <div style={{ marginBottom: "2rem", display: "flex", justifyContent: "center", gap: "1rem" }}>
+                <button
+                    onClick={clearCanvas}
+                    className="btn btn-outline"
+                >
+                    <Trash2 size={18} /> Clear
+                </button>
+                <button
+                    onClick={saveDrawing}
+                    className="btn btn-primary"
+                >
+                    <Save size={18} /> Save & Share
+                </button>
+            </div>
 
             <div className="drawing-container">
                 <video
