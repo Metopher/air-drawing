@@ -1,0 +1,157 @@
+import { useEffect, useRef } from "react";
+import { Trash2 } from "lucide-react";
+
+function AirDrawing() {
+    const videoRef = useRef(null);
+    const videoCanvasRef = useRef(null);
+    const drawCanvasRef = useRef(null);
+
+    let lastPoint = null;
+    let isProcessing = false;
+
+    useEffect(() => {
+        const video = videoRef.current;
+        const videoCanvas = videoCanvasRef.current;
+        const drawCanvas = drawCanvasRef.current;
+
+        if (!video || !videoCanvas || !drawCanvas) return;
+
+        const vCtx = videoCanvas.getContext("2d");
+        const dCtx = drawCanvas.getContext("2d");
+
+        const hands = new window.Hands({
+            locateFile: (file) =>
+                `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7,
+        });
+
+        hands.onResults((results) => {
+            // Always draw live video
+            vCtx.save();
+            vCtx.scale(-1, 1);
+            vCtx.drawImage(
+                video,
+                -videoCanvas.width,
+                0,
+                videoCanvas.width,
+                videoCanvas.height
+            );
+            vCtx.restore();
+
+            if (results.multiHandLandmarks?.length) {
+                const lm = results.multiHandLandmarks[0];
+
+                // Landmarks
+                const indexTip = lm[8];
+                const indexPIP = lm[6];
+
+                const middleTip = lm[12];
+                const ringTip = lm[16];
+                const pinkyTip = lm[20];
+
+                // 👆 Index finger pointed condition
+                const indexUp = indexTip.y < indexPIP.y;
+                const othersDown =
+                    middleTip.y > indexPIP.y &&
+                    ringTip.y > indexPIP.y &&
+                    pinkyTip.y > indexPIP.y;
+
+                if (indexUp && othersDown) {
+                    const x = (1 - indexTip.x) * drawCanvas.width;
+                    const y = indexTip.y * drawCanvas.height;
+
+                    dCtx.strokeStyle = "#3b82f6"; // Blue accent color
+                    dCtx.lineWidth = 6;
+                    dCtx.lineCap = "round";
+
+                    if (lastPoint) {
+                        dCtx.beginPath();
+                        dCtx.moveTo(lastPoint.x, lastPoint.y);
+                        dCtx.lineTo(x, y);
+                        dCtx.stroke();
+                    }
+
+                    lastPoint = { x, y };
+                } else {
+                    lastPoint = null;
+                }
+            } else {
+                lastPoint = null;
+            }
+        });
+
+        // Camera loop (stable)
+        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+            video.srcObject = stream;
+            video.play();
+
+            const processFrame = async () => {
+                if (!isProcessing && video.readyState === 4) {
+                    isProcessing = true;
+                    await hands.send({ image: video });
+                    isProcessing = false;
+                }
+                requestAnimationFrame(processFrame);
+            };
+
+            processFrame();
+        });
+    }, []);
+
+    const clearCanvas = () => {
+        const canvas = drawCanvasRef.current;
+        canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    };
+
+    return (
+        <div style={{ textAlign: "center", padding: "2rem" }}>
+            <h2 className="text-2xl font-bold" style={{ marginBottom: "1rem" }}>
+                Air Drawing Mode
+            </h2>
+            <p className="text-secondary" style={{ marginBottom: "2rem" }}>
+                Point your index finger to draw. Close your hand to stop.
+            </p>
+
+            <button
+                onClick={clearCanvas}
+                className="btn btn-primary"
+                style={{ marginBottom: "2rem" }}
+            >
+                <Trash2 size={18} /> Clear Canvas
+            </button>
+
+            <div className="drawing-container">
+                <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    style={{ display: "none" }}
+                />
+
+                {/* Video layer */}
+                <canvas
+                    ref={videoCanvasRef}
+                    width="800"
+                    height="600"
+                />
+
+                {/* Drawing layer */}
+                <canvas
+                    ref={drawCanvasRef}
+                    width="800"
+                    height="600"
+                    style={{ pointerEvents: "none" }}
+                />
+            </div>
+        </div>
+    );
+}
+
+export default AirDrawing;
