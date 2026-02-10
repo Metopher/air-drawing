@@ -58,22 +58,39 @@ function AirDrawing() {
 
                 // 👆 Index finger pointed condition
                 const indexUp = indexTip.y < indexPIP.y;
-                const othersDown =
-                    middleTip.y > indexPIP.y &&
-                    ringTip.y > indexPIP.y &&
-                    pinkyTip.y > indexPIP.y;
+                const middleUp = middleTip.y < lm[10].y; // Middle finger PIP is index 10
 
-                if (indexUp && othersDown) {
+                // Other (Ring & Pinky) fingers down
+                const othersDown =
+                    ringTip.y > lm[14].y && // Ring finger PIP is index 14
+                    pinkyTip.y > lm[18].y;  // Pinky finger PIP is index 18
+
+                // Draw: Index UP, Middle DOWN, Others DOWN
+                const isDrawing = indexUp && !middleUp && othersDown;
+
+                // Erase: Index UP, Middle UP, Others DOWN
+                const isErasing = indexUp && middleUp && othersDown;
+
+                if (isDrawing || isErasing) {
                     const x = (1 - indexTip.x) * drawCanvas.width;
                     const y = indexTip.y * drawCanvas.height;
 
-                    dCtx.strokeStyle = "#3b82f6"; // Blue accent color
-                    dCtx.lineWidth = 6;
-                    dCtx.lineCap = "round";
+                    if (isErasing) {
+                        dCtx.globalCompositeOperation = "destination-out";
+                        dCtx.lineWidth = 20; // Thicker for eraser
+                        dCtx.lineCap = "round";
+                    } else {
+                        dCtx.globalCompositeOperation = "source-over";
+                        dCtx.strokeStyle = "#3b82f6"; // Blue accent color
+                        dCtx.lineWidth = 6;
+                        dCtx.lineCap = "round";
+                    }
 
                     if (lastPoint) {
                         dCtx.beginPath();
                         dCtx.moveTo(lastPoint.x, lastPoint.y);
+                        // Connect to average of index and middle if erasing for smoother feel? 
+                        // For now keep tracing index finger for consistency
                         dCtx.lineTo(x, y);
                         dCtx.stroke();
                     }
