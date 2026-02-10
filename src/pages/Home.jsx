@@ -18,8 +18,8 @@ const Home = () => {
                         <Link to="/draw" className="btn btn-primary" style={{ fontSize: "1.1rem", padding: "1rem 2rem" }}>
                             Start Drawing <ArrowRight size={20} />
                         </Link>
-                        <Link to="/signup" className="btn btn-outline" style={{ fontSize: "1.1rem", padding: "1rem 2rem" }}>
-                            Join Now
+                        <Link to="/learn" className="btn btn-outline" style={{ fontSize: "1.1rem", padding: "1rem 2rem" }}>
+                            Learn to Write
                         </Link>
                     </div>
                 </div>
